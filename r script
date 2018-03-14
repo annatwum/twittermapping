@@ -1,0 +1,107 @@
+library(pacman)
+
+# This loads and installs the packages you need at once
+pacman::p_load(foreign,twitteR,jsonlite)
+
+#https://apps.twitter.com/app/14912316/keys where I access the keys, tokens and secrets
+
+#toInstall <- c("twitteR", "dismo", "maps", "ggplot2")
+#lapply(toInstall, library, character.only = TRUE)
+#install.packages("magrittr")
+#install.packages("leaflet") 
+#install.packages("maps") 
+#install.packages(imagemagick)
+#install.packages("OpenStreetMap")
+#library(OpenStreetMap)
+#install.packages("rJava")
+library(twitteR)
+library(leaflet) 
+library(maps)
+library(magrittr)
+library(dplyr)
+library(tidyr)
+library(tm)
+library(maps)
+library(dismo)
+
+
+
+#SET WORKING DIRECTORY 
+setwd("~/Desktop/Machine%20learning/Homework2")
+
+#SET UP TWITTER OAUTH
+setup_twitter_oauth(
+  consumer_key="MLWIzE8XI4yvqZazuBdWeLIxs", 
+  consumer_secret="WUGApVYh2yORLNixQhl4IBu35TTHwxifTYDP3gNO75P3TVFaPk", 
+  access_token="1082657760-tDe1Rdil9fx5LJ0Y7EkceQSSlaFifnBVywLeY3q", 
+  access_secret="xD42mcKP1Kic3YPlyVddCWXsvwFHMKaMvGUz1t0JkHuZp")
+
+
+# INSERT SEARCH TERM 
+      searchTerm="Congo" # INSERT TERM HERE 
+
+# RUN CODE TO CREATE CORPUS OF SEARCH TERM TWEETS
+      tweets=searchTwitter(searchTerm, n=1000, lang = "en") # DECIDE ON NUMBER OF TWEETS.RUNS SLOWER WITH MORE TWEETS
+      #tweets=searchTwitter(searchTerm, n=100, lang = "en", geocode='32.05693,-148.207784,10mi', since="2014-08-20")
+      bp=twListToDF(tweets)
+
+      bp$tweetC=gsub("\t"," ",bp$text)
+      bp$tweetC=gsub("\n"," ",bp$tweetC)
+
+# A #  GET LOCATIONS AND REMOVE TWEETS WITHOUT GEOCODES
+
+    #SAVE DF AS CSV
+    write.csv(bp,'bp.csv')
+    
+    #CALL IN CSV
+    bpc=read.csv("bp.csv", stringsAsFactors = FALSE)
+    attach(bpc)
+    
+    bpcgeo=subset(bpc,(!is.na(bpc[,16]))) # removes NAs in longitude column
+     
+
+ # B #  ANOTHER OPTION FOR FINDING LOCATION using analysis of tweets
+      
+      userDetails=lookupUsers(bp$screenName)  # Batch lookup of user info
+      userDeatilsDf=twListToDF(userInfo)  # transform data frame
+      
+      locatedUsers=!is.na(userDeatilsDf$location)  # use only users with locations information
+      
+      locations=geocode(userDeatilsDf$location[locatedUsers])  # this line estimates location
+
+
+# MAP #  Using A or B above map tweets 
+
+library(maps)# you can also use Open street maps but sometimes installing java on MAC can be a pain 
+mapStates = map("world", fill = TRUE, plot = FALSE)
+leaflet(locations) %>% addTiles() %>% #insert dataframe from option A (bpcgeo) OR B (bpclocations) above. 
+ addCircles(lng = ~longitude, lat = ~latitude, weight = 8, radius = 40, color = "#900C3F", stroke = TRUE, fillOpacity = 0.8)
+
+#### MAP SHOULD GENERATE AFTER THIS #################################
+
+
+# INTERACTIVE MAPS DO NOT RUN (!!!Still in progress !!!)
+        site_locations <- leaflet(bpc) %>%
+          addTiles() %>%
+          addCircleMarkers(lng = ~long, lat = ~lat, popup = ~tweet_text,
+                           radius = 3, stroke = FALSE)
+        
+        site_locations
+        
+        ## interactive Option 2 
+        rng <- range(annualtemps$z, na.rm=TRUE)
+        n <- length(unique(annualtemps$Year))
+        suffix <- "annual_2D"
+        temps <- split(temps, temps$frameID)
+        walk(temps, ~save_map(.x, ortho=FALSE, col=pal, type="maptiles", suffix=suffix, z.range=rng))
+        
+
+
+#All attempts to remove NA
+#bpc=drop_na(longitude)
+#bpc=na.omit(bpc[,16])
+#as.data.frame(colnames(bpc))
+#bp=na.omit(bp, cols="longitude")
+#bpc <- bpc[!(is.na(bpc[,16]))]
+
+
